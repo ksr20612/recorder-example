@@ -13,6 +13,8 @@ interface Returns {
     time: number; // 녹음 경과 시간
     audio: string | null; // Blob 오디오 소스
     bufferArray: Float32Array[] | null; // Pcm 데이터 배열
+    audioContext: AudioContext; // context
+    analyser: AnalyserNode; // analyser
     record: () => void; // 녹음 실행
     pause: () => void; // 녹음 중지
     stop: () => void; // 녹음 종료
@@ -27,8 +29,8 @@ const useRecord = (option: Partial<Options>): Returns => {
     const [time, setTime] = useState<number>(0);
     const [audio, setAudio] = useState<string | null>(null);
     const [bufferArray, setBufferArray] = useState<Float32Array[] | null>(null);
-
     const recordedSize = useRef<number>(0);
+    const analyser = useRef<AnalyserNode | null>(null);
 
     useEffect(() => {
         init();
@@ -41,6 +43,7 @@ const useRecord = (option: Partial<Options>): Returns => {
             audioContext.current = null;
             source.current = null;
             processor.current = null;
+            analyser.current = null;
         }
     }, []);
 
@@ -60,6 +63,7 @@ const useRecord = (option: Partial<Options>): Returns => {
         const micSource = context.createMediaStreamSource(micStream);
         const channelCount = option?.channel ?? micSource.channelCount;
         const monitorNode = context.createGain();
+        const analyserNode = context.createAnalyser();
 
         await context.audioWorklet.addModule("recording-processor.js");
         const node = new AudioWorkletNode(context, "recording-processor", {
@@ -101,11 +105,13 @@ const useRecord = (option: Partial<Options>): Returns => {
             }
         };
 
-        micSource.connect(node).connect(monitorNode).connect(context.destination);
-        
+        micSource.connect(node).connect(monitorNode).connect(analyserNode).connect(context.destination);
+        analyserNode.connect(node);
+
         audioContext.current = context;
         source.current = micSource;
         processor.current = node;
+        analyser.current = analyserNode;
     }
 
     const record = () => {
@@ -138,7 +144,7 @@ const useRecord = (option: Partial<Options>): Returns => {
         });
     }
 
-    return { isRecording, time, audio, bufferArray, record, pause, stop };
+    return { isRecording, time, audio, bufferArray, audioContext: audioContext.current!, analyser: analyser.current!, record, pause, stop };
 };
 
 export default useRecord;

@@ -119,14 +119,19 @@ class RecordingProcessor extends AudioWorkletProcessor {
     }
 
     // 현재까지 녹음한 버퍼를 App에 전달
-    shareRecordingBuffer() {
+    shareRecordingBuffer(portMessage) {
         const message = {
-            message: "SHARE_RECORDING_BUFFER",
+            message: portMessage?? "SHARE_RECORDING_BUFFER",
             buffer: this.recordingBuffer.map((buffer) => buffer.slice(0, this.recordedFrames + 128)),
         };
         this.port.postMessage(message);
         console.log("%c[Processor] %c-> %c[App]", "color: pink; font-weight: 700", "", "color: #FFC700; font-weight: 700", message);
     }
+
+    getBuffer() {
+        return this.recordingBuffer.map((buffer) => buffer.slice(0, this.recordedFrames + 128));
+    }
+
 }
 
 // 새로운 오디오 worklet 프로세서 등록
